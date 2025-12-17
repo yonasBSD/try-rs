@@ -162,16 +162,16 @@ fn run_app(
             // --- DESENHO DA LISTA (Normal) ---
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Length(3), Constraint::Min(1)])
+                .constraints([
+                    Constraint::Length(3),
+                    Constraint::Min(1),
+                    Constraint::Length(1),
+                ])
                 .split(f.size());
 
             let search_text = Paragraph::new(app.query.clone())
                 .style(Style::default().fg(Color::Yellow))
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(" Buscar Experimento "),
-                );
+                .block(Block::default().borders(Borders::ALL).title(" Search "));
             f.render_widget(search_text, chunks[0]);
 
             let items: Vec<ListItem> = app
@@ -181,7 +181,7 @@ fn run_app(
                     let date: DateTime<Local> = entry.modified.into();
                     let date_str = date.format("%Y-%m-%d %H:%M");
                     let content = Line::from(vec![
-                        Span::raw(format!("{:<30}", entry.name)),
+                        Span::raw(format!("📁{:<30}", entry.name)),
                         Span::styled(
                             format!("({})", date_str),
                             Style::default().fg(Color::DarkGray),
@@ -192,11 +192,7 @@ fn run_app(
                 .collect();
 
             let list = List::new(items)
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(" Resultados (Ctrl+D para apagar) "),
-                )
+                .block(Block::default().borders(Borders::ALL).title(" Folders "))
                 .highlight_style(
                     Style::default()
                         .bg(Color::Blue)
@@ -208,6 +204,25 @@ fn run_app(
             let mut state = ListState::default();
             state.select(Some(app.selected_index));
             f.render_stateful_widget(list, chunks[1], &mut state);
+
+            // --- NOVO: Widget de Rodapé (Help) ---
+            // Usamos 'Line' e 'Span' para poder estilizar partes do texto (negrito nas teclas)
+            let help_text = Line::from(vec![
+                Span::styled("↑↓", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(": Navigate  "),
+                Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(": Select  "),
+                Span::styled("Ctrl-D", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(": Delete  "),
+                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
+                Span::raw(": Cancel"),
+            ]);
+
+            let help_message = Paragraph::new(help_text)
+                .style(Style::default().fg(Color::DarkGray)) // Cor discreta
+                .alignment(Alignment::Center); // Centralizado (opcional, pode remover para ficar à esquerda)
+
+            f.render_widget(help_message, chunks[2]);
 
             // --- DESENHO DO POPUP (Se estiver no modo DeleteConfirm) ---
             if app.mode == AppMode::DeleteConfirm {
