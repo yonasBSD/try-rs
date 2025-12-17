@@ -111,7 +111,7 @@ impl App {
 }
 
 fn draw_popup(f: &mut Frame, title: &str, message: &str) {
-    let area = f.size();
+    let area = f.area();
 
     // 1. Define uma área no centro (60% de largura, 20% de altura)
     let popup_layout = Layout::default()
@@ -168,7 +168,7 @@ fn run_app(
                     Constraint::Min(1),
                     Constraint::Length(1),
                 ])
-                .split(f.size());
+                .split(f.area());
 
             let search_text = Paragraph::new(app.query.clone())
                 .style(Style::default().fg(Color::Yellow))
