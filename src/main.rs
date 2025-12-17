@@ -126,11 +126,11 @@ fn run_app(
                 .block(Block::default().borders(Borders::ALL).title(" Folders "))
                 .highlight_style(
                     Style::default()
-                        .bg(Color::Blue)
+                        .bg(Color::DarkGray)
                         .fg(Color::White)
                         .add_modifier(Modifier::BOLD),
                 )
-                .highlight_symbol(">> ");
+                .highlight_symbol("→ ");
 
             // O Ratatui precisa de um state para saber qual item renderizar como selecionado
             let mut state = ListState::default();
