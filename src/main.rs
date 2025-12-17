@@ -11,6 +11,12 @@ use ratatui::{prelude::*, widgets::*};
 use std::process::Stdio;
 use std::{fs, io, path::PathBuf, time::SystemTime};
 
+#[derive(Clone, Copy, PartialEq)]
+enum AppMode {
+    Normal,
+    DeleteConfirm,
+}
+
 // Modelo de dados (igual ao anterior)
 #[derive(Clone)]
 struct TryEntry {
@@ -27,6 +33,7 @@ struct App {
     selected_index: usize,           // Qual item está selecionado na lista
     should_quit: bool,               // Flag para sair do loop
     final_selection: Option<String>, // O resultado final (para o shell)
+    mode: AppMode,
 }
 
 impl App {
@@ -55,6 +62,7 @@ impl App {
             selected_index: 0,
             should_quit: false,
             final_selection: None,
+            mode: AppMode::Normal,
         }
     }
 
@@ -82,37 +90,98 @@ impl App {
         }
         self.selected_index = 0; // Reseta a seleção para o topo
     }
+
+    // NOVO MÉTODO: Função para apagar o item selecionado
+    fn delete_selected(&mut self, base_path: &std::path::Path) {
+        if let Some(entry) = self.filtered_entries.get(self.selected_index) {
+            let path_to_remove = base_path.join(&entry.name);
+
+            // Tenta remover o diretório
+            if fs::remove_dir_all(&path_to_remove).is_ok() {
+                // Remove da lista em memória 'all_entries'
+                self.all_entries.retain(|e| e.name != entry.name);
+                // Atualiza a pesquisa para refrescar a lista filtrada
+                self.update_search();
+            }
+        }
+        // Volta ao modo normal
+        self.mode = AppMode::Normal;
+    }
+}
+
+fn draw_popup(f: &mut Frame, title: &str, message: &str) {
+    let area = f.size();
+
+    // 1. Define uma área no centro (60% de largura, 20% de altura)
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage(40),
+            Constraint::Length(3), // Altura do popup
+            Constraint::Percentage(40),
+        ])
+        .split(area);
+
+    let popup_area = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(20),
+            Constraint::Percentage(60), // Largura do popup
+            Constraint::Percentage(20),
+        ])
+        .split(popup_layout[1])[1];
+
+    // 2. Limpa a área do popup (para não ver o texto de trás misturado)
+    f.render_widget(Clear, popup_area);
+
+    // 3. Cria o bloco com borda vermelha (alerta)
+    let block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .style(Style::default().bg(Color::DarkGray)); // Fundo cinza escuro
+
+    let paragraph = Paragraph::new(message)
+        .block(block)
+        .style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))
+        .alignment(Alignment::Center);
+
+    f.render_widget(paragraph, popup_area);
 }
 
 fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stderr>>,
     mut app: App,
 ) -> Result<Option<String>> {
+    // Precisamos do caminho base para poder deletar
+    // (Poderíamos ter guardado na struct App, mas vamos pegar do contexto aqui)
+    let home = dirs::home_dir().expect("Home não encontrado");
+    let tries_dir = home.join("src/tries");
+
     while !app.should_quit {
         terminal.draw(|f| {
-            // 1. Layout: Divide a tela verticalmente (3 linhas pro input, resto pra lista)
+            // --- DESENHO DA LISTA (Normal) ---
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Length(3), Constraint::Min(1)])
                 .split(f.size());
 
-            // 2. Widget de Input (Search)
             let search_text = Paragraph::new(app.query.clone())
                 .style(Style::default().fg(Color::Yellow))
-                .block(Block::default().borders(Borders::ALL).title(" 📁 Search "));
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title(" Buscar Experimento "),
+                );
             f.render_widget(search_text, chunks[0]);
 
-            // 3. Widget de Lista
             let items: Vec<ListItem> = app
                 .filtered_entries
                 .iter()
                 .map(|entry| {
-                    // Formata a data bonitinha
                     let date: DateTime<Local> = entry.modified.into();
                     let date_str = date.format("%Y-%m-%d %H:%M");
-
                     let content = Line::from(vec![
-                        Span::raw(format!("📁{:<30}", entry.name)),
+                        Span::raw(format!("{:<30}", entry.name)),
                         Span::styled(
                             format!("({})", date_str),
                             Style::default().fg(Color::DarkGray),
@@ -123,59 +192,88 @@ fn run_app(
                 .collect();
 
             let list = List::new(items)
-                .block(Block::default().borders(Borders::ALL).title(" Folders "))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title(" Resultados (Ctrl+D para apagar) "),
+                )
                 .highlight_style(
                     Style::default()
-                        .bg(Color::DarkGray)
+                        .bg(Color::Blue)
                         .fg(Color::White)
                         .add_modifier(Modifier::BOLD),
                 )
-                .highlight_symbol("→ ");
+                .highlight_symbol(">> ");
 
-            // O Ratatui precisa de um state para saber qual item renderizar como selecionado
             let mut state = ListState::default();
             state.select(Some(app.selected_index));
-
             f.render_stateful_widget(list, chunks[1], &mut state);
+
+            // --- DESENHO DO POPUP (Se estiver no modo DeleteConfirm) ---
+            if app.mode == AppMode::DeleteConfirm {
+                if let Some(selected) = app.filtered_entries.get(app.selected_index) {
+                    let msg = format!("Apagar '{}'? (y/n)", selected.name);
+                    draw_popup(f, " ATENÇÃO ", &msg);
+                }
+            }
         })?;
 
-        // 4. Tratamento de Eventos (Teclado)
+        // --- TRATAMENTO DE TECLAS ---
         if event::poll(std::time::Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char(c) => {
-                        app.query.push(c);
-                        app.update_search();
-                    }
-                    KeyCode::Backspace => {
-                        app.query.pop();
-                        app.update_search();
-                    }
-                    KeyCode::Up => {
-                        if app.selected_index > 0 {
-                            app.selected_index -= 1;
+                // O comportamento depende do modo
+                match app.mode {
+                    AppMode::Normal => match key.code {
+                        KeyCode::Char(c) => {
+                            // Ctrl+D para deletar
+                            if c == 'd' && key.modifiers.contains(event::KeyModifiers::CONTROL) {
+                                // Só entra no modo delete se houver algo selecionado
+                                if !app.filtered_entries.is_empty() {
+                                    app.mode = AppMode::DeleteConfirm;
+                                }
+                            } else {
+                                app.query.push(c);
+                                app.update_search();
+                            }
                         }
-                    }
-                    KeyCode::Down => {
-                        if app.selected_index < app.filtered_entries.len().saturating_sub(1) {
-                            app.selected_index += 1;
+                        KeyCode::Backspace => {
+                            app.query.pop();
+                            app.update_search();
                         }
-                    }
-                    KeyCode::Enter => {
-                        // Se a lista tiver itens, pega o selecionado.
-                        // Se estiver vazia, usa o texto digitado (criar novo)
-                        if !app.filtered_entries.is_empty() {
-                            app.final_selection =
-                                Some(app.filtered_entries[app.selected_index].name.clone());
-                        } else if !app.query.is_empty() {
-                            app.final_selection = Some(app.query.clone());
+                        KeyCode::Up => {
+                            if app.selected_index > 0 {
+                                app.selected_index -= 1;
+                            }
                         }
-                        app.should_quit = true;
-                    }
-                    KeyCode::Esc => {
-                        app.should_quit = true;
-                    }
-                    _ => {}
+                        KeyCode::Down => {
+                            if app.selected_index < app.filtered_entries.len().saturating_sub(1) {
+                                app.selected_index += 1;
+                            }
+                        }
+                        KeyCode::Enter => {
+                            if !app.filtered_entries.is_empty() {
+                                app.final_selection =
+                                    Some(app.filtered_entries[app.selected_index].name.clone());
+                            } else if !app.query.is_empty() {
+                                app.final_selection = Some(app.query.clone());
+                            }
+                            app.should_quit = true;
+                        }
+                        KeyCode::Esc => app.should_quit = true,
+                        _ => {}
+                    },
+
+                    AppMode::DeleteConfirm => match key.code {
+                        KeyCode::Char('y') | KeyCode::Char('Y') => {
+                            // Confirmou!
+                            app.delete_selected(&tries_dir);
+                        }
+                        KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                            // Cancelou
+                            app.mode = AppMode::Normal;
+                        }
+                        _ => {} // Ignora outras teclas no popup
+                    },
                 }
             }
         }
