@@ -11,7 +11,7 @@
 
 This project is a Rust port and re-imagination of the excellent [try](https://github.com/tobi/try) tool by **Tobi Lütke**.
 
-While the original is a lightweight Ruby script, **try-rs** aims to bring the same philosophy—"Your experiments deserve a home"—but with the performance, type safety, and modern TUI capabilities (using [Ratatui](https://github.com/ratatui/ratatui)) of the Rust ecosystem.
+While the original is a lightweight Ruby script, **try-rs** aims to bring the same philosophy, "Your experiments deserve a home", but with the performance, type safety, and modern TUI capabilities (using [Ratatui](https://github.com/ratatui/ratatui)) of the Rust ecosystem.
 
 ## 🤔 Why try-rs?
 
