@@ -369,6 +369,36 @@ fn get_configuration_path() -> PathBuf {
     default_path
 }
 
+fn setup_fish() -> Result<()> {
+    let config_dir = dirs::config_dir().unwrap_or_else(|| {
+        dirs::home_dir().expect("Could not find home directory").join(".config")
+    });
+
+    let fish_functions_dir = config_dir.join("fish").join("functions");
+
+    if !fish_functions_dir.exists() {
+        fs::create_dir_all(&fish_functions_dir)?;
+    }
+
+    let file_path = fish_functions_dir.join("try-rs.fish");
+    let content = r#"function try-rs
+    # Captures the output of the binary (stdout) which is the "cd" command
+    # The TUI is rendered on stderr, so it doesn't interfere.
+    set command (command try-rs $argv | string collect)
+
+    if test -n "$command"
+        eval $command
+    end
+end
+"#;
+
+    fs::write(&file_path, content)?;
+    println!("Fish function created at: {}", file_path.display());
+    println!("You may need to restart your shell or run 'source {}' to apply changes.", file_path.display());
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let tries_dir = get_configuration_path();
 
@@ -379,6 +409,10 @@ fn main() -> Result<()> {
 
     // 2. Check command line arguments
     let args: Vec<String> = std::env::args().collect();
+
+    if args.len() > 2 && args[1] == "--setup" && args[2] == "fish" {
+        return setup_fish();
+    }
 
     // The 'selection' variable will hold the chosen name or URL.
     // It can come from arguments (CLI) or the interface (TUI).
