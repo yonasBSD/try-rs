@@ -28,6 +28,7 @@ struct TryEntry {
     score: i64,
     is_git: bool,
     is_mise: bool,
+    is_cargo: bool,
 }
 
 #[derive(Clone)]
@@ -88,6 +89,7 @@ impl App {
                         let name = entry.file_name().to_string_lossy().to_string();
                         let is_git = entry.path().join(".git").exists();
                         let is_mise = entry.path().join("mise.toml").exists();
+                        let is_cargo = entry.path().join("Cargo.toml").exists();
                         entries.push(TryEntry {
                             name,
                             modified: metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH),
@@ -95,6 +97,7 @@ impl App {
                             score: 0,
                             is_git,
                             is_mise,
+                            is_cargo,
                         });
                     }
                 }
@@ -286,6 +289,8 @@ fn run_app(
                     let git_width = if entry.is_git { 2 } else { 0 };
                     let mise_icon = if entry.is_mise { "󰬔 " } else { "" };
                     let mise_width = if entry.is_mise { 2 } else { 0 };
+                    let cargo_icon = if entry.is_cargo { " " } else { "" };
+                    let cargo_width = if entry.is_cargo { 2 } else { 0 };
                     let icon_width = 2; // "📁" takes 2 columns
                     
                     let created_dt: chrono::DateTime<Local> = entry.created.into();
@@ -293,7 +298,7 @@ fn run_app(
                     let created_width = created_text.chars().count();
 
                     // Calculate space for name
-                    let reserved = date_width + git_width + mise_width + icon_width + created_width + 2; // +2 for gaps
+                    let reserved = date_width + git_width + mise_width + cargo_width + icon_width + created_width + 2; // +2 for gaps
                     let available_for_name = width.saturating_sub(reserved);
                     let name_len = entry.name.chars().count();
 
@@ -304,7 +309,7 @@ fn run_app(
                     } else {
                         (
                             entry.name.clone(),
-                            width.saturating_sub(icon_width + created_width + 1 + name_len + date_width + git_width + mise_width),
+                            width.saturating_sub(icon_width + created_width + 1 + name_len + date_width + git_width + mise_width + cargo_width),
                         )
                     };
 
@@ -313,6 +318,7 @@ fn run_app(
                         Span::styled(created_text, Style::default().fg(app.theme.list_date)),
                         Span::raw(format!(" {}", display_name)),
                         Span::raw(" ".repeat(padding)),
+                        Span::styled(cargo_icon, Style::default().fg(Color::Rgb(230, 100, 50))),
                         Span::styled(mise_icon, Style::default().fg(Color::Rgb(250, 179, 135))),
                         Span::styled(git_icon, Style::default().fg(Color::Rgb(240, 80, 50))),
                         Span::styled(date_text, Style::default().fg(app.theme.list_date)),
