@@ -2,30 +2,30 @@ name: Update AUR
 
 on:
   workflow_run:
-    workflows: ["GitHub Release"] # Nome exato do seu workflow de Release
+    workflows: ["GitHub Release"]
     types:
       - completed
-
-# Gatilho Manual (para você testar agora)
+  
   workflow_dispatch:
     inputs:
       tag_name:
         description: 'Tag version (ex: v0.1.0)'
         required: true
-        default: 'v0.1.32'
+        default: 'v0.1.0'
 
 jobs:
   aur:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     container: archlinux:base-devel
+    
+    # CORREÇÃO AQUI: Lógica segura para evitar erro em execução manual
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install dependencies
-        # Instala git e openssh no container Arch
         run: pacman -Sy --noconfirm git openssh
 
       - name: Setup SSH
@@ -37,41 +37,44 @@ jobs:
 
       - name: Clone AUR repo
         run: |
-          # Clona o repositório binário do AUR
           git clone ssh://aur@aur.archlinux.org/try-rs-bin.git aur
 
       - name: Update PKGBUILD and Checksums
         run: |
-          # 1. Captura a Tag corretamente do evento workflow_run
-          TAG_NAME=${{ github.event.workflow_run.head_branch }}
+          TAG_NAME="${{ github.event.workflow_run.head_branch }}"
+          
+          if [ -z "$TAG_NAME" ]; then
+            TAG_NAME="${{ inputs.tag_name }}"
+          fi
+          
+          # Remove o 'v'
           VERSION=${TAG_NAME#v}
           
-          echo "Atualizando para a versão: $VERSION"
+          echo "Processando Tag: $TAG_NAME | Versão: $VERSION"
 
           cd aur
 
-          # 2. Atualiza versão e reseta o release para 1
           sed -i "s/^pkgver=.*/pkgver=$VERSION/" PKGBUILD
           sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
 
-          # 3. Prepara usuário 'builder' (makepkg não roda como root)
           useradd -m builder
           chown -R builder:builder .
 
-          # 4. Atualiza checksums (baixa o binário do release) e gera .SRCINFO
           su builder -c "updpkgsums"
           su builder -c "makepkg --printsrcinfo > .SRCINFO"
 
-          # 5. Corrige permissão de diretório para o git (pois mudamos o dono acima)
           git config --global --add safe.directory $PWD
 
       - name: Commit and push
         run: |
           cd aur
-          TAG_NAME=${{ github.event.workflow_run.head_branch }}
+          TAG_NAME="${{ github.event.workflow_run.head_branch }}"
+          if [ -z "$TAG_NAME" ]; then
+            TAG_NAME="${{ inputs.tag_name }}"
+          fi
           
-          git config user.name "Tássio Virgínio"
-          git config user.email "tassiovirginio@gmail.com"
+          git config user.name "Tássio Virginio"
+          git config user.email "tassio.virginio@ufba.br"
           
           git add PKGBUILD .SRCINFO
           git commit -m "Update to $TAG_NAME"
