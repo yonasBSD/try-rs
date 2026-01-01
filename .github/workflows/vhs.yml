@@ -46,8 +46,17 @@ jobs:
         run: cargo build --release
 
       - name: Run VHS
+        # Define explicitamente que este passo deve ser interpretado pelo Fish
+        shell: fish {0}
         run: |
-          export PATH="$PWD/target/release:$PATH"
+          # Sintaxe do Fish para adicionar ao PATH e exportar (-x)
+          set -x PATH "$PWD/target/release" $PATH
+          
+          # Debug para confirmar
+          echo "Rodando dentro do Fish!"
+          which try-rs
+          
+          # Executa o VHS
           vhs try-rs.tape
 
       - name: Commit and Push GIF
