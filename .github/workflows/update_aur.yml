@@ -1,37 +1,54 @@
 name: Update AUR
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
 
 jobs:
   aur:
     runs-on: ubuntu-latest
+    container: archlinux:base-devel # 1. Usa container com ferramentas Arch
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install dependencies
+        # Instala git e openssh necessários para clonar/push
+        run: pacman -Sy --noconfirm git openssh
+
       - name: Setup SSH
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+          mkdir -p /root/.ssh
+          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > /root/.ssh/id_ed25519
+          chmod 600 /root/.ssh/id_ed25519
+          ssh-keyscan aur.archlinux.org >> /root/.ssh/known_hosts
 
       - name: Clone AUR repo
+        # 2. Corrigido para try-rs-bin se esse for seu alvo
         run: |
-          git clone ssh://aur@aur.archlinux.org/try-rs.git aur
-          
-      - name: Update PKGBUILD
+          git clone ssh://aur@aur.archlinux.org/try-rs-bin.git aur
+
+      - name: Update PKGBUILD and Checksums
         run: |
+          # Pega a versão da tag do release (ex: v0.1.0 -> 0.1.0)
           VERSION=${GITHUB_REF#refs/tags/v}
           cd aur
-
+          
+          # Atualiza a versão no PKGBUILD
           sed -i "s/^pkgver=.*/pkgver=$VERSION/" PKGBUILD
-          updpkgsums
-          makepkg --printsrcinfo > .SRCINFO
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          
+          # 3. Cria usuário 'builder' pois makepkg não roda como root
+          useradd -m builder
+          chown -R builder:builder .
+          
+          # Roda updpkgsums e mksrcinfo como usuário comum
+          su builder -c "updpkgsums"
+          su builder -c "makepkg --printsrcinfo > .SRCINFO"
+          
+          # (Opcional) Verifique se os arquivos mudaram antes de commitar
+          git config --global --add safe.directory /__w/try-rs/try-rs/aur
 
       - name: Commit and push
         run: |
@@ -39,5 +56,5 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add PKGBUILD .SRCINFO
-          git commit -m "Update to v${GITHUB_REF#refs/tags/v}"
+          git commit -m "Update to $GITHUB_REF_NAME"
           git push
