@@ -62,8 +62,8 @@ jobs:
           cd aur
           TAG_NAME=${{ github.event.workflow_run.head_branch }}
           
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          git config user.name "Tássio Virgínio"
+          git config user.email "tassiovirginio@gmail.com"
           
           git add PKGBUILD .SRCINFO
           git commit -m "Update to $TAG_NAME"
