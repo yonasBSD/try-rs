@@ -98,6 +98,7 @@ pub struct Cli {
     pub hide_right_panel: bool,
 }
 
+/// Supported shell types for integration setup and tab-completion generation.
 #[derive(ValueEnum, Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Shell {
     Fish,

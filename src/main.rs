@@ -43,6 +43,10 @@ fn print_cd_or_editor(path: &std::path::Path, open_editor: bool, editor_cmd: &Op
 #[cfg(not(windows))]
 const DSR: &str = "\x1b[6n";
 
+/// Query the terminal for the current cursor position via DSR (Device Status Report).
+///
+/// On Unix, this reads directly from `/dev/tty`. On Windows, it delegates to
+/// `crossterm::cursor::position()`.
 fn get_cursor_position_for_inline_picker() -> io::Result<(u16, u16)> {
     #[cfg(windows)]
     {
@@ -84,6 +88,10 @@ fn get_cursor_position_for_inline_picker() -> io::Result<(u16, u16)> {
     }
 }
 
+/// Compute the terminal area for the inline picker, scrolling if necessary.
+///
+/// Ensures the picker fits below the current cursor line, scrolling the
+/// terminal content up when there is not enough room.
 fn compute_inline_picker_area(
     backend: &mut CrosstermBackend<io::Stderr>,
     requested_height: u16,
@@ -285,6 +293,11 @@ fn handle_new_folder(
     Ok(())
 }
 
+/// The program entry point.
+///
+/// Parses CLI arguments, loads configuration, and either handles a
+/// short-circuit command (setup, completions, worktree) or launches
+/// the TUI.
 fn main() -> Result<()> {
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,

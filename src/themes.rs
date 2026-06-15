@@ -127,6 +127,7 @@ impl Theme {
         }
     }
 
+    /// Build the default theme (light-on-dark, no explicit background).
     pub fn default_theme() -> Self {
         Self {
             // Default theme keeps original hardcoded icon colors for real-world brands
@@ -163,6 +164,7 @@ impl Theme {
         }
     }
 
+    /// Build the Catppuccin Mocha theme.
     pub fn catppuccin_mocha() -> Self {
         Self::from_palette(
             "Catppuccin Mocha",
@@ -184,6 +186,7 @@ impl Theme {
         )
     }
 
+    /// Build the Catppuccin Macchiato theme.
     pub fn catppuccin_macchiato() -> Self {
         Self {
             title_rs: Color::Rgb(238, 153, 160), // Maroon (not Red)
@@ -208,6 +211,7 @@ impl Theme {
         }
     }
 
+    /// Build the Dracula theme.
     pub fn dracula() -> Self {
         let cyan = Color::Rgb(139, 233, 253);
         Self {
@@ -240,6 +244,7 @@ impl Theme {
         }
     }
 
+    /// Build the JetBrains Darcula theme.
     pub fn jetbrains_darcula() -> Self {
         Self {
             search_title: Color::Rgb(106, 135, 89),        // Green
@@ -269,6 +274,7 @@ impl Theme {
         }
     }
 
+    /// Build the Gruvbox Dark theme.
     pub fn gruvbox_dark() -> Self {
         Self {
             title_rs: Color::Rgb(250, 189, 47),            // Yellow
@@ -301,6 +307,7 @@ impl Theme {
         }
     }
 
+    /// Build the Nord theme.
     pub fn nord() -> Self {
         Self {
             search_title: Color::Rgb(163, 190, 140),  // Green (not warm)
@@ -329,6 +336,7 @@ impl Theme {
         }
     }
 
+    /// Build the Tokyo Night theme.
     pub fn tokyo_night() -> Self {
         let cyan = Color::Rgb(125, 207, 255);
         Self {
@@ -360,6 +368,7 @@ impl Theme {
         }
     }
 
+    /// Build the One Dark Pro theme.
     pub fn one_dark_pro() -> Self {
         let cyan = Color::Rgb(86, 182, 194);
         Self {
@@ -387,6 +396,7 @@ impl Theme {
         }
     }
 
+    /// Build the Everforest theme.
     pub fn everforest() -> Self {
         Self::from_palette(
             "Everforest",
@@ -408,6 +418,7 @@ impl Theme {
         )
     }
 
+    /// Build the SynthWave '84 theme.
     pub fn synthwave_84() -> Self {
         Self {
             search_title: Color::Rgb(255, 203, 107), // Yellow (not orange)
@@ -437,6 +448,7 @@ impl Theme {
         }
     }
 
+    /// Build the OLED True Black theme.
     pub fn oled_true_black() -> Self {
         Self {
             helpers_colors: Color::Rgb(100, 100, 100), // Grey (different from overlay)
@@ -463,6 +475,7 @@ impl Theme {
         }
     }
 
+    /// Build the Silver Gray theme.
     pub fn silver_gray() -> Self {
         Self {
             preview_title: Color::Rgb(176, 196, 222), // Light Steel Blue
@@ -489,6 +502,7 @@ impl Theme {
         }
     }
 
+    /// Build the Black & White theme.
     pub fn black_and_white() -> Self {
         Self {
             icon_mise: Color::Gray,
@@ -518,6 +532,7 @@ impl Theme {
         }
     }
 
+    /// Build the Matrix theme.
     pub fn matrix() -> Self {
         let bright = Color::Rgb(0, 255, 65);
         let dark = Color::Rgb(0, 100, 30);
@@ -555,6 +570,7 @@ impl Theme {
         }
     }
 
+    /// Build the Tron theme.
     pub fn tron() -> Self {
         let cyan = Color::Rgb(0, 255, 255);
         let orange = Color::Rgb(255, 150, 0);
@@ -593,6 +609,7 @@ impl Theme {
         }
     }
 
+    /// Build the Monokai Pro theme.
     pub fn monokai_pro() -> Self {
         Self {
             title_try: Color::Rgb(250, 250, 250),
@@ -633,6 +650,7 @@ impl Theme {
         }
     }
 
+    /// Build the Solarized Dark theme.
     pub fn solarized_dark() -> Self {
         Self {
             search_title: Color::Rgb(133, 153, 0),
@@ -675,6 +693,7 @@ impl Theme {
         }
     }
 
+    /// Build the Night Owl theme.
     pub fn night_owl() -> Self {
         let cyan = Color::Rgb(136, 192, 208);
         Self {
@@ -718,6 +737,7 @@ impl Theme {
         }
     }
 
+    /// Build the Gruvbox Material theme.
     pub fn gruvbox_material() -> Self {
         Self {
             title_rs: Color::Rgb(251, 191, 36),
@@ -757,6 +777,7 @@ impl Theme {
         }
     }
 
+    /// Build the Zenburn theme.
     pub fn zenburn() -> Self {
         Self {
             search_title: Color::Rgb(104, 151, 71),
@@ -800,6 +821,7 @@ impl Theme {
         }
     }
 
+    /// Build the Solarized Light theme.
     pub fn solarized_light() -> Self {
         Self {
             search_title: Color::Rgb(133, 153, 0),
@@ -842,6 +864,7 @@ impl Theme {
         }
     }
 
+    /// Build the Monokai Pro Light theme.
     pub fn monokai_pro_light() -> Self {
         Self {
             title_try: Color::Rgb(50, 50, 40),
@@ -882,6 +905,7 @@ impl Theme {
         }
     }
 
+    /// Build the Light Owl theme.
     pub fn light_owl() -> Self {
         let cyan = Color::Rgb(70, 150, 180);
         Self {
@@ -925,6 +949,7 @@ impl Theme {
         }
     }
 
+    /// Build the Cyberpunk theme.
     pub fn cyberpunk() -> Self {
         let neon_pink = Color::Rgb(255, 0, 128);
         let neon_blue = Color::Rgb(0, 255, 255);
@@ -974,6 +999,7 @@ impl Theme {
         }
     }
 
+    /// Build the Paper theme.
     pub fn paper() -> Self {
         Self {
             title_try: Color::Rgb(0, 0, 0),
@@ -1018,6 +1044,7 @@ impl Theme {
         }
     }
 
+    /// Build the Hacker theme.
     pub fn hacker() -> Self {
         let bright = Color::Rgb(0, 255, 65);
         let dark = Color::Rgb(0, 80, 20);
@@ -1065,6 +1092,7 @@ impl Theme {
         }
     }
 
+    /// Build the Ubuntu theme.
     pub fn ubuntu() -> Self {
         Self {
             search_title: Color::Rgb(166, 82, 33),
@@ -1108,6 +1136,7 @@ impl Theme {
         }
     }
 
+    /// Build the Man Page theme.
     pub fn man_page() -> Self {
         Self {
             title_try: Color::Rgb(0, 0, 0),
@@ -1153,6 +1182,7 @@ impl Theme {
         }
     }
 
+    /// Build a list of all available themes.
     pub fn all() -> Vec<Theme> {
         vec![
             Theme::default_theme(),

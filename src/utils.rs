@@ -18,6 +18,11 @@ pub fn is_inside_git_repo<P: AsRef<Path>>(path: P) -> bool {
         .unwrap_or(false)
 }
 
+/// Check whether a git worktree at the given path is locked.
+///
+/// A worktree is considered locked when its `.git` file (not directory)
+/// points to a parent repository that contains a `locked` file alongside
+/// the worktree's administrative data.
 pub fn is_git_worktree_locked(path: &Path) -> bool {
     let dot_git = path.join(".git");
     if dot_git.is_file() {
@@ -42,10 +47,15 @@ pub fn is_git_worktree(path: &Path) -> bool {
     dot_git.is_file()
 }
 
+/// Parse a `.git` file (worktree pointer) and return the path it points to.
 fn parse_dot_git(dot_git: &Path) -> std::io::Result<PathBuf> {
     Ok(first_line(&std::fs::read(dot_git)?).into())
 }
 
+/// Extract the first path component from a `.git` worktree pointer file.
+///
+/// The file format is `gitdir: /path/to/worktree\n`. This function skips
+/// the `gitdir: ` prefix and returns everything up to the first newline.
 #[cfg(unix)]
 pub fn first_line(bytes: &[u8]) -> OsString {
     use std::os::unix::ffi::OsStringExt;
@@ -72,6 +82,7 @@ pub fn first_line(bytes: &[u8]) -> OsString {
     OsString::from(String::from_utf8_lossy(&vec).to_string())
 }
 
+/// Remove a git worktree by running `git worktree remove` inside it.
 pub fn remove_git_worktree(path_to_remove: &Path) -> std::io::Result<std::process::Output> {
     Command::new("git")
         .args(["worktree", "remove", "."])
@@ -79,6 +90,7 @@ pub fn remove_git_worktree(path_to_remove: &Path) -> std::io::Result<std::proces
         .output()
 }
 
+/// Expand a path string, resolving a leading `~/` to the user's home directory.
 pub fn expand_path(path_str: &str) -> PathBuf {
     if (path_str.starts_with("~/") || (cfg!(windows) && path_str.starts_with("~\\")))
         && let Some(home) = dirs::home_dir()
@@ -88,6 +100,10 @@ pub fn expand_path(path_str: &str) -> PathBuf {
     PathBuf::from(path_str)
 }
 
+/// Check whether a string looks like a git URL.
+///
+/// Returns `true` if the string starts with `http://`, `https://`, `git@`,
+/// `ssh://`, or ends with `.git`.
 pub fn is_git_url(s: &str) -> bool {
     s.starts_with("http://")
         || s.starts_with("https://")
@@ -96,6 +112,11 @@ pub fn is_git_url(s: &str) -> bool {
         || s.ends_with(".git")
 }
 
+/// Extract the repository name from a git URL.
+///
+/// Strips the `.git` suffix and trailing slashes, then takes the last
+/// path/colon-delimited component. Falls back to `"cloned-repo"` if
+/// the URL is empty or has no identifiable name.
 pub fn extract_repo_name(url: &str) -> String {
     let clean_url = url.trim_end_matches('/').trim_end_matches(".git");
     if let Some(last_part) = clean_url.rsplit(['/', ':']).next()
@@ -106,6 +127,11 @@ pub fn extract_repo_name(url: &str) -> String {
     "cloned-repo".to_string()
 }
 
+/// Get the free disk space on the filesystem containing `path`, in megabytes.
+///
+/// Uses `statvfs` on Unix. Returns `None` when the path is invalid or when
+/// querying the filesystem statistics fails. Always returns `None` on
+/// non-Unix platforms (the default stub).
 #[cfg(unix)]
 pub fn get_free_disk_space_mb(path: &Path) -> Option<u64> {
     use std::ffi::CString;
@@ -130,6 +156,11 @@ pub fn get_free_disk_space_mb(_path: &Path) -> Option<u64> {
     None
 }
 
+/// Extract a `YYYY-MM-DD` date prefix from a directory name.
+///
+/// Returns the parsed `SystemTime` and the remainder of the name when the
+/// name starts with a valid date followed by a space. Returns `None` if
+/// the name does not start with a date in the expected format.
 pub fn extract_prefix_date(name: &str) -> Option<(SystemTime, String)> {
     let (lhs, rhs) = name.split_once(' ')?;
     let naive_date = NaiveDate::parse_from_str(lhs, DATE_PREFIX_FORMAT).ok()?;
@@ -138,12 +169,20 @@ pub fn extract_prefix_date(name: &str) -> Option<(SystemTime, String)> {
     Some((dt_local.into(), rhs.into()))
 }
 
+/// Generate a date string suitable as a directory name prefix.
+///
+/// Uses `%Y-%m-%d` by default. An optional custom format string can be
+/// provided via the `format` parameter.
 pub fn generate_prefix_date(format: Option<&str>) -> String {
     let now = Local::now();
     let fmt = format.unwrap_or(DATE_PREFIX_FORMAT);
     now.format(fmt).to_string()
 }
 
+/// Calculate the total size of a directory tree in megabytes.
+///
+/// Walks all nested directories and sums the sizes of regular files.
+/// Symlinks (both file and directory) are intentionally skipped.
 pub fn get_folder_size_mb(path: &Path) -> u64 {
     fn dir_size(path: &Path) -> u64 {
         let mut stack = vec![path.to_path_buf()];
@@ -170,6 +209,11 @@ pub fn get_folder_size_mb(path: &Path) -> u64 {
     dir_size(path) / (1024 * 1024)
 }
 
+/// Find folders inside `path` whose name (possibly date-prefixed) matches `name`.
+///
+/// Returns a list of `(parent_path, folder_name)` tuples for every immediate
+/// subdirectory whose filename equals `name` or whose date-stripped display
+/// name equals `name`.
 pub fn matching_folders(name: &str, path: &PathBuf) -> Vec<(PathBuf, String)> {
     let mut result = vec![];
     if let Ok(read_dir) = fs::read_dir(&path) {
@@ -191,7 +235,7 @@ pub fn matching_folders(name: &str, path: &PathBuf) -> Vec<(PathBuf, String)> {
     result
 }
 
-// i've put this here since until now there is not really a library part
+/// The outcome of the folder selection process.
 pub enum SelectionResult {
     /// A explicit folder that is guaranteed to exist already
     Folder(String),

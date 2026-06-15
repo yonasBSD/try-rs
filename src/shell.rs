@@ -518,6 +518,10 @@ export extern try-rs [
     }
 }
 
+/// Get the expected file path for a shell's integration script.
+///
+/// Fish integration goes into the Fish functions directory; all other shells
+/// use the try-rs config directory.
 pub fn get_shell_integration_path(shell: &Shell) -> PathBuf {
     let config_dir = match shell {
         Shell::Fish => get_base_config_dir(),
@@ -533,6 +537,9 @@ pub fn get_shell_integration_path(shell: &Shell) -> PathBuf {
     }
 }
 
+/// Get the Fish shell functions directory by querying `fish -c 'echo $__fish_config_dir'`.
+///
+/// Falls back to `$XDG_CONFIG_HOME/fish/functions` when fish cannot be invoked.
 fn get_fish_functions_dir() -> PathBuf {
     if let Ok(output) = std::process::Command::new("fish")
         .args(["-c", "echo $__fish_config_dir"])
@@ -549,6 +556,7 @@ fn get_fish_functions_dir() -> PathBuf {
     get_base_config_dir().join("fish").join("functions")
 }
 
+/// Write the Fish picker helper function (`try-rs-picker.fish`) to disk.
 fn write_fish_picker_function() -> Result<PathBuf> {
     let file_path = get_fish_functions_dir().join("try-rs-picker.fish");
     if let Some(parent) = file_path.parent()
@@ -564,11 +572,12 @@ fn write_fish_picker_function() -> Result<PathBuf> {
     Ok(file_path)
 }
 
+/// Check whether shell integration has already been installed for the given shell.
 pub fn is_shell_integration_configured(shell: &Shell) -> bool {
     get_shell_integration_path(shell).exists()
 }
 
-/// Appends a source command to an RC file if not already present.
+/// Append a source command to an RC file if it is not already present.
 fn append_source_to_rc(rc_path: &std::path::Path, source_cmd: &str) -> Result<()> {
     if rc_path.exists() {
         let content = fs::read_to_string(rc_path)?;
@@ -591,7 +600,7 @@ fn append_source_to_rc(rc_path: &std::path::Path, source_cmd: &str) -> Result<()
     Ok(())
 }
 
-/// Writes the shell integration file and returns its path.
+/// Write the shell integration script to disk and return its path.
 fn write_shell_integration(shell: &Shell) -> Result<std::path::PathBuf> {
     let file_path = get_shell_integration_path(shell);
     if let Some(parent) = file_path.parent()
@@ -706,6 +715,7 @@ pub fn generate_completions(shell: &Shell) -> Result<()> {
     Ok(())
 }
 
+/// Return a list of shells that are installed on the current system.
 pub fn get_installed_shells() -> Vec<Shell> {
     let mut shells = Vec::new();
     for shell in [
@@ -722,6 +732,7 @@ pub fn get_installed_shells() -> Vec<Shell> {
     shells
 }
 
+/// Check whether a supported shell is available on the system using `whereis`.
 fn is_shell_installed(shell: &Shell) -> bool {
     let shell_name = match shell {
         Shell::Fish => "fish",
@@ -747,6 +758,7 @@ fn is_shell_installed(shell: &Shell) -> bool {
     }
 }
 
+/// Remove shell integration for all installed shells, including RC-file cleanup.
 pub fn clear_shell_setup() -> Result<()> {
     let installed_shells = get_installed_shells();
 
@@ -788,6 +800,7 @@ pub fn clear_shell_setup() -> Result<()> {
     Ok(())
 }
 
+/// Remove integration files and RC-file entries for a single shell.
 fn clear_shell_config(shell: &Shell) -> Result<()> {
     let integration_file = get_shell_integration_path(shell);
     if integration_file.exists() {
@@ -835,6 +848,7 @@ fn clear_shell_config(shell: &Shell) -> Result<()> {
     Ok(())
 }
 
+/// Remove try-rs source lines from an RC file.
 fn remove_source_from_rc(rc_path: &std::path::Path) -> Result<()> {
     let content = fs::read_to_string(rc_path)?;
     if content.contains("try-rs") {
@@ -860,6 +874,7 @@ fn remove_source_from_rc(rc_path: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
+/// Get the config file paths associated with a given shell's integration.
 fn get_shell_config_paths(shell: &Shell) -> Vec<PathBuf> {
     let mut paths = Vec::new();
     let config_dir = get_base_config_dir();

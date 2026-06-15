@@ -25,7 +25,8 @@ use crate::{
     utils::{self, SelectionResult},
 };
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+/// Modes the TUI application can be in.
 pub enum AppMode {
     Normal,
     DeleteConfirm,
@@ -38,6 +39,7 @@ pub enum AppMode {
 }
 
 #[derive(Clone)]
+/// A single entry in the tries directory listing.
 pub struct TryEntry {
     pub name: String,
     pub display_name: String,
@@ -58,6 +60,7 @@ pub struct TryEntry {
     pub is_python: bool,
 }
 
+/// The main application state for the TUI.
 pub struct App {
     pub query: String,
     pub all_entries: Vec<TryEntry>,
@@ -103,6 +106,7 @@ pub struct App {
 }
 
 impl App {
+    /// Check whether a filesystem entry corresponds to the current working directory.
     fn is_current_entry(
         entry_path: &Path,
         entry_name: &str,
@@ -131,6 +135,7 @@ impl App {
         false
     }
 
+    /// Create a new `App` instance, scanning the given path for entries.
     pub fn new(
         path: PathBuf,
         theme: Theme,
@@ -286,6 +291,7 @@ impl App {
         app
     }
 
+    /// Switch to a different tries directory tab.
     pub fn switch_tab(&mut self, new_tab: usize) {
         if new_tab >= self.tries_dirs.len() {
             return;
@@ -309,6 +315,7 @@ impl App {
         self.update_search();
     }
 
+    /// (Re)load directory entries from `base_path` into `all_entries`.
     fn load_entries(&mut self) {
         self.all_entries.clear();
 
@@ -370,10 +377,12 @@ impl App {
         self.all_entries.sort_by(|a, b| b.modified.cmp(&a.modified));
     }
 
+    /// Check whether any entry exactly matches the current query.
     pub fn has_exact_match(&self) -> bool {
         self.all_entries.iter().any(|e| e.name == self.query)
     }
 
+    /// Re-filter entries based on the current query and update match indices.
     pub fn update_search(&mut self) {
         if self.query.is_empty() {
             self.filtered_entries = self.all_entries.clone();
@@ -406,6 +415,7 @@ impl App {
         self.selected_index = 0;
     }
 
+    /// Delete the currently selected entry from disk and the entry list.
     pub fn delete_selected(&mut self) {
         if let Some(entry_name) = self
             .filtered_entries
@@ -455,6 +465,7 @@ impl App {
         self.mode = AppMode::Normal;
     }
 
+    /// Rename the currently selected entry using the text in `rename_input`.
     pub fn rename_selected(&mut self) {
         let new_name = self.rename_input.trim().to_string();
         if new_name.is_empty() {
@@ -512,6 +523,7 @@ impl App {
     }
 }
 
+/// Draw a centered popup with a title and message.
 fn draw_popup(f: &mut Frame, title: &str, message: &str, theme: &Theme) {
     let area = f.area();
 
@@ -559,6 +571,7 @@ fn draw_popup(f: &mut Frame, title: &str, message: &str, theme: &Theme) {
     f.render_widget(paragraph, popup_area);
 }
 
+/// Draw the theme-selection popup.
 fn draw_theme_select(f: &mut Frame, app: &mut App) {
     let area = f.area();
     let popup_layout = Layout::default()
@@ -630,6 +643,7 @@ fn draw_theme_select(f: &mut Frame, app: &mut App) {
     f.render_widget(transparency_paragraph, inner_layout[1]);
 }
 
+/// Draw the config-save-location selection popup.
 fn draw_config_location_select(f: &mut Frame, app: &mut App) {
     let area = f.area();
     let popup_layout = Layout::default()
@@ -679,6 +693,7 @@ fn draw_config_location_select(f: &mut Frame, app: &mut App) {
     f.render_stateful_widget(list, popup_area, &mut app.config_location_state);
 }
 
+/// Draw the move-folder destination selection popup.
 fn draw_move_folder_select(f: &mut Frame, app: &mut App) {
     let area = f.area();
     let popup_layout = Layout::default()
@@ -735,6 +750,7 @@ fn draw_move_folder_select(f: &mut Frame, app: &mut App) {
     f.render_stateful_widget(list, popup_area, &mut app.move_folder_state);
 }
 
+/// Draw the About popup.
 fn draw_about_popup(f: &mut Frame, theme: &Theme) {
     let area = f.area();
     let popup_layout = Layout::default()
@@ -817,6 +833,7 @@ fn draw_about_popup(f: &mut Frame, theme: &Theme) {
     f.render_widget(paragraph, popup_area);
 }
 
+/// Build a vector of styled `Span`s with highlighted match regions.
 fn build_highlighted_name_spans(
     text: &str,
     match_indices: &[usize],
@@ -868,6 +885,7 @@ fn build_highlighted_name_spans(
     spans
 }
 
+/// Run the main TUI event loop until the user makes a selection or quits.
 pub fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stderr>>,
     mut app: App,

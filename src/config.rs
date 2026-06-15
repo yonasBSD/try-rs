@@ -22,10 +22,17 @@ pub struct Config {
     pub right_panel_width: Option<u16>,
 }
 
+/// Get the config file name, respecting the `TRY_CONFIG` environment variable.
+///
+/// Defaults to `"config.toml"` when `TRY_CONFIG` is not set.
 pub fn get_file_config_toml_name() -> String {
     std::env::var("TRY_CONFIG").unwrap_or("config.toml".to_string())
 }
 
+/// Get the try-rs configuration directory.
+///
+/// Respects `$TRY_CONFIG_DIR` if set, otherwise falls back to
+/// `$XDG_CONFIG_HOME/try-rs` or the platform-specific default.
 pub fn get_config_dir() -> PathBuf {
     std::env::var_os("TRY_CONFIG_DIR")
         .map(PathBuf::from)
@@ -47,7 +54,10 @@ pub fn get_base_config_dir() -> PathBuf {
         })
 }
 
-/// Returns candidate config file paths in priority order.
+/// Return candidate config file paths in priority order.
+///
+/// Checks (in order): `$TRY_CONFIG_DIR/<name>`, `$XDG_CONFIG_HOME/try-rs/<name>`,
+/// `~/.config/try-rs/<name>`.
 fn config_candidates() -> Vec<PathBuf> {
     let config_name = get_file_config_toml_name();
     let mut candidates = Vec::new();
@@ -64,17 +74,19 @@ fn config_candidates() -> Vec<PathBuf> {
     candidates
 }
 
-/// Finds the first existing config file path.
+/// Find the first existing config file path among the candidates.
 fn find_config_path() -> Option<PathBuf> {
     config_candidates().into_iter().find(|p| p.exists())
 }
 
+/// Load the configuration from the TOML config file, if it exists and is valid.
 pub fn load_file_config_toml_if_exists() -> Option<Config> {
     let path = find_config_path()?;
     let contents = fs::read_to_string(&path).ok()?;
     toml::from_str::<Config>(&contents).ok()
 }
 
+/// Aggregated runtime configuration, merging CLI, env, and file sources.
 pub struct AppConfig {
     pub tries_dirs: Vec<PathBuf>,
     pub active_tab: usize,
@@ -91,6 +103,10 @@ pub struct AppConfig {
     pub right_panel_width: Option<u16>,
 }
 
+/// Load and merge all configuration sources into a single `AppConfig`.
+///
+/// Precedence (highest first): CLI flags, environment variables (`TRY_PATH`,
+/// `VISUAL`, `EDITOR`), config file values, built-in defaults.
 pub fn load_configuration() -> AppConfig {
     let default_path = dirs::home_dir()
         .expect("Folder not found")
@@ -167,6 +183,9 @@ pub fn load_configuration() -> AppConfig {
     }
 }
 
+/// Persist the current configuration to a TOML file at the given path.
+///
+/// Creates parent directories if they do not exist.
 pub fn save_config(
     path: &Path,
     theme: &Theme,
